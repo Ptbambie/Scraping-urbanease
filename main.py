@@ -6,8 +6,8 @@ import psycopg2
 import json
 from urllib.parse import urlparse
 from conf import DB_NAME, USER, PASSWORD, HOST, SITE_URL, NUM_PAGES, DEPARTMENTS, CATEGORIES
-from secrets import DB_NAME, USER, PASSWORD, HOST
-import time  # Importez le module time
+
+import time 
 
 # Configuration du dossier pour les fichiers JSON
 data_folder = os.path.join(os.path.dirname(__file__), 'data')
@@ -27,33 +27,28 @@ if not os.path.exists(logs_folder):
 logging.basicConfig(filename=os.path.join(logs_folder, 'logfile.log'), level=logging.INFO)
 logger = logging.getLogger()
 
-# Code SQL pour créer la table
-CREATE_TABLE_QUERY = """
-CREATE TABLE IF NOT EXISTS announcements (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255),
-    price INTEGER,
-    url VARCHAR(255),
-    city VARCHAR(255),
-    surface INTEGER,
-    postal_code INTEGER
-)
-"""
-
-# Connexion à la base de données
+# Définissez les informations de connexion à la base de données (à partir du fichier conf.py)
 conn = psycopg2.connect(
     dbname=DB_NAME,
     user=USER,
     password=PASSWORD,
     host=HOST
 )
-cursor = conn.cursor()
 
-# Exécution de la requête
-cursor.execute(CREATE_TABLE_QUERY)
+# curseur pour exécuter des requêtes SQL
+cur = conn.cursor()
 
-# Validation de la transaction
-conn.commit()
+# Fonction pour insérer une annonce dans la base de données
+def insert_announcement(data):
+    try:
+        cur.execute("""
+            INSERT INTO annonces (title, price, url, city, surface, postal_code)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (data['title'], data['price'], data['url'], data['city'], data['surface'], data['postal_code']))
+        conn.commit()
+    except psycopg2.Error as e:
+        conn.rollback()
+        logger.error(f"Erreur lors de l'insertion de l'annonce : {str(e)}")
 
 # Fonction pour générer l'URL
 def generate_url(department, category, page):
@@ -97,7 +92,7 @@ def scrape_online_announcements(department, category, num_pages):
         html = get_html(url)
         if html:
             soup = BeautifulSoup(html, 'html.parser')
-            announcements = soup.find_all("div", {"class": "annonce"})  # On récupère les annonces
+            announcements = soup.find_all("div", {"class": "map-layout__col map-layout__col--content"})  # On récupère les annonces
             if announcements:  # Si il y a des annonces
                 for announcement in announcements:  # Pour chaque annonce
                     try:
@@ -108,8 +103,16 @@ def scrape_online_announcements(department, category, num_pages):
                                 # Nettoyer le prix
                                 cleaned_price = clean_price(data['price'])
                                 if cleaned_price is not None:
-                                    # Traitement de l'annonce pour l'ajouter à la structure de données
-                                    department_data.append(data)
+                                    # Vérifier si l'annonce existe déjà dans la base de données
+                                    cur.execute("SELECT url FROM annonces WHERE url = %s", (data['url'],))
+                                    existing_url = cur.fetchone()
+                                    if existing_url is None:
+                                        # Traitement de l'annonce pour l'ajouter à la structure de données
+                                        department_data.append(data)
+                                        # Insérer l'annonce dans la base de données
+                                        insert_announcement(data)
+                                    else:
+                                        logger.info(f"Annonce en double trouvée pour l'URL : {data['url']}")
                     except Exception as e:  # Si il y a une erreur
                         logger.error(f"Erreur lors du traitement de l'annonce sur la page {page}: {str(e)}")
         else:
@@ -122,7 +125,7 @@ def scrape_online_announcements(department, category, num_pages):
     save_data_to_json(department_data, department)
 
 # Fonction pour extraire les données d'une annonce
-def extract_annoucement_data(announcement):
+def extract_announcement_data(announcement):
     data = {
         'title': '',         # Titre de l'annonce
         'price': None,       # Prix de l'annonce
@@ -134,31 +137,32 @@ def extract_annoucement_data(announcement):
 
     # Extraction des données
     try:
-        title_elem = announcement.find("span", {"class": "title"})
+        # Extraction des données de l'annonce
+        title_elem = announcement.find("h2", {"class": "offer-card__header__title"})
         if title_elem:
             data['title'] = title_elem.text.strip()
-        
-        price_elem = announcement.find("div", {"class": "price"})
+        # Extraction du prix de l'annonce
+        price_elem = announcement.find("span", {"class": "badge__content__inner"})
         if price_elem:
             data['price'] = price_elem.text.strip()
-        
+        # Extraction de l'URL de l'annonce
         url_elem = announcement.find("a", {"class": "list_item"})
         if url_elem and 'href' in url_elem.attrs:
             data['url'] = url_elem['href']
-        
-        city_elem = announcement.find("div", {"class": "placement"})
+        # Extraction de la ville de l'annonce
+        city_elem = announcement.find("div", {"class": "collapsed-text__content collapsed-text__content--collapsed"})
         if city_elem:
             data['city'] = city_elem.text.strip()
-        
-        surface_elem = announcement.find("div", {"class": "chiffres"})
+        # Extraction de la surface de l'annonce
+        surface_elem = announcement.find("span", {"class": "badge__content__inner"})
         if surface_elem:
             surface_text = surface_elem.text.strip()
             # Extraction de la surface (en m²) en tant qu'entier
             surface_value = ''.join(filter(str.isdigit, surface_text))
             if surface_value:
                 data['surface'] = int(surface_value)
-        
-        postal_code_elem = announcement.find("div", {"class": "placement"})
+        # Extraction du code postal de l'annonce
+        postal_code_elem = announcement.find("h2", {"class": "offer-card__header__title"})
         if postal_code_elem:
             # Extraction du code postal en tant qu'entier
             postal_code_value = ''.join(filter(str.isdigit, postal_code_elem.text.strip()))
@@ -183,6 +187,10 @@ def main():
             print(f"Scraping des annonces pour le département {department} et la catégorie {category}...")
             scrape_online_announcements(department, category, NUM_PAGES)
             print(f"Scraping terminé pour le département {department} et la catégorie {category}.")
+
+# Fermez le curseur et la connexion à la base de données à la fin du script
+cur.close()
+conn.close()
 
 if __name__ == "__main__":
     main()
