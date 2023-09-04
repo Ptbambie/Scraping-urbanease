@@ -1,6 +1,6 @@
 # desciption de la base de données
 DB_NAME = 'annonces_db'
-USER = 'postgres'
+USER = 'audreyalaime'
 PASSWORD = ''
 HOST = 'localhost'
 PORT = '5432'

@@ -142,7 +142,7 @@ def extract_announcement_data(announcement):
         if title_elem:
             data['title'] = title_elem.text.strip()
         # Extraction du prix de l'annonce
-        price_elem = announcement.find("span", {"class": "badge__content__inner"})
+        price_elem = announcement.find("span", {"class": "badge_content"})
         if price_elem:
             data['price'] = price_elem.text.strip()
         # Extraction de l'URL de l'annonce
