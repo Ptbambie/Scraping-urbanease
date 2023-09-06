@@ -54,6 +54,6 @@
 Mon script génère plusieurs fichiers :
 - `logfile.log` : Un fichier journal où je peux suivre les étapes de traitement du script, les données collectées et toute information pertinente.
 
-- `resultats_{department}.json` : Des fichiers JSON contenant les données extraites par département.
+- `{department}_data.json` : Des fichiers JSON contenant les données extraites par département.
 
 J'ai suivi ces étapes pour accomplir cet exercice. Bonne lecture et n'hésitez pas à me contacter si vous avez des questions !
