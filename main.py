@@ -7,6 +7,7 @@ import json
 from urllib.parse import urlparse
 from conf import DB_NAME, USER, PASSWORD, HOST, SITE_URL, NUM_PAGES, DEPARTMENTS, CATEGORIES
 
+
 import time 
 
 # Configuration du dossier pour les fichiers JSON
@@ -180,13 +181,18 @@ def save_data_to_json(data, department):
     with open(filepath, 'w', encoding='utf-8') as json_file:
         json.dump(data, json_file, ensure_ascii=False, indent=4)
 
-# Fonction principale
+# Exemple d'ajout de messages INFO dans le script
 def main():
     for department in DEPARTMENTS:
         for category in CATEGORIES:
+            logger.info(f"Début du scraping pour le département {department} et la catégorie {category}.")
             print(f"Scraping des annonces pour le département {department} et la catégorie {category}...")
             scrape_online_announcements(department, category, NUM_PAGES)
             print(f"Scraping terminé pour le département {department} et la catégorie {category}.")
+            logger.info(f"Fin du scraping pour le département {department} et la catégorie {category}.")
+
+logging.basicConfig(filename=os.path.join(logs_folder, 'logfile.log'), level=logging.INFO)
+
 
 # Fermez le curseur et la connexion à la base de données à la fin du script
 cur.close()
