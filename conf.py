@@ -1,4 +1,3 @@
-# conf.py
 SITE_URL = "https://www.cessionpme.com"
 NUM_PAGES = 10  # Nombre de pages à scraper
 DEPARTMENTS = ["64", "33"]

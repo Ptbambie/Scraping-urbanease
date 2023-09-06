@@ -28,7 +28,7 @@ if not os.path.exists(logs_folder):
 logging.basicConfig(filename=os.path.join(logs_folder, 'logfile.log'), level=logging.INFO)
 logger = logging.getLogger()
 
-# Définissez les informations de connexion à la base de données (à partir du fichier conf.py)
+# Définir les informations de connexion à la base de données (à partir du fichier conf.py)
 conn = psycopg2.connect(
     dbname=DB_NAME,
     user=USER,
@@ -119,7 +119,7 @@ def scrape_online_announcements(department, category, num_pages):
         else:
             print(f'Erreur lors de la requête sur l\'url {url}')
         
-        # Ajoutez une pause d'une seconde avant de faire la prochaine requête
+        # Ajoute une pause d'une seconde avant de faire la prochaine requête
         time.sleep(1)
 
     # Sauvegarde des données au format JSON
@@ -138,23 +138,23 @@ def extract_announcement_data(announcement):
 
     # Extraction des données
     try:
-        # Extraction des données de l'annonce
+        # Extraction des données de l'annonce(titre)
         title_elem = announcement.find("h2", {"class": "offer-card__header__title"})
         if title_elem:
             data['title'] = title_elem.text.strip()
-        # Extraction du prix de l'annonce
+        # Extraction du prix de l'annonce (texte)
         price_elem = announcement.find("span", {"class": "badge_content"})
         if price_elem:
             data['price'] = price_elem.text.strip()
-        # Extraction de l'URL de l'annonce
+        # Extraction de l'URL de l'annonce(url)
         url_elem = announcement.find("a", {"class": "list_item"})
         if url_elem and 'href' in url_elem.attrs:
             data['url'] = url_elem['href']
-        # Extraction de la ville de l'annonce
+        # Extraction de la ville de l'annonce(ville)
         city_elem = announcement.find("div", {"class": "collapsed-text__content collapsed-text__content--collapsed"})
         if city_elem:
             data['city'] = city_elem.text.strip()
-        # Extraction de la surface de l'annonce
+        # Extraction de la surface de l'annonce(surface)
         surface_elem = announcement.find("span", {"class": "badge__content__inner"})
         if surface_elem:
             surface_text = surface_elem.text.strip()
